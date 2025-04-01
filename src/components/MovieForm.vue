@@ -41,18 +41,15 @@ function saveMovie() {
   .then(function (data) {
     if (data.message) {
         successMessage.value = data.message;
-        errorMessage.value = [];
         movieForm.reset();
     }
     if (data.errors) {
-        successMessage.value = "";
         errorMessage.value = data.errors;
     }
 
     console.log(data);
   })
   .catch(function (error) {
-    successMessage.value = "";
     errorMessage.value = ["An error occurred. Please try again."];
     console.error(error);
   });

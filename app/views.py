@@ -5,7 +5,7 @@ Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
 from app import app, db
-from flask import render_template, request, jsonify, send_file
+from flask import render_template, request, jsonify, send_file, send_from_directory
 import os
 from app.models import Movie
 from app.forms import MovieForm
@@ -21,38 +21,55 @@ from flask_wtf.csrf import generate_csrf
 def index():
     return jsonify(message="This is the beginning of our API")
 
-@app.route('/api/v1/movies', methods=['POST'])
+@app.route('/api/v1/posters/<filename>')
+def get_poster(filename):
+    return send_from_directory(os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER']), filename)
+
+@app.route('/api/v1/movies', methods=['GET', 'POST'])
 def movies():
-    movieForm = MovieForm()
+    if request.method == 'GET':
+        movies = Movie.query.all()
 
-    if movieForm.validate_on_submit():
-        try:
-            title = movieForm.title.data
-            description = movieForm.description.data
-            poster = movieForm.poster.data
+        movies_list = [{
+            "id": movie.id,
+            "title": movie.title,
+            "description": movie.description,
+            "poster": f"/api/v1/posters/{movie.poster}"
+        } for movie in movies]
 
-            filename = secure_filename(poster.filename)
-            movie = db.session.execute(db.select(Movie).filter_by(poster=filename)).scalar_one_or_none()
+        return jsonify(movies=movies_list)
 
-            if movie:
-                return jsonify(errors=["Movie poster already exists"])
+    elif request.method == 'POST':
+        movieForm = MovieForm()
 
-            poster.save(
-                os.path.join(app.config['UPLOAD_FOLDER'],
-                filename
-            ))
+        if movieForm.validate_on_submit():
+            try:
+                title = movieForm.title.data
+                description = movieForm.description.data
+                poster = movieForm.poster.data
 
-            new_movie = Movie(title=title, description=description, poster=filename)
-            db.session.add(new_movie)
-            db.session.commit()
+                filename = secure_filename(poster.filename)
+                movie = db.session.execute(db.select(Movie).filter_by(poster=filename)).scalar_one_or_none()
 
-            return jsonify(message="Movie Successfully added", title=title, poster=filename, description=description)
+                if movie:
+                    return jsonify(errors=["Movie poster already exists"])
 
-        except Exception as e:
-            db.session.rollback()
-            return jsonify(errors=["Failed to add movie"], details=str(e))
-    else:
-        return jsonify(errors=form_errors(movieForm))
+                poster.save(
+                    os.path.join(app.config['UPLOAD_FOLDER'],
+                    filename
+                ))
+
+                new_movie = Movie(title=title, description=description, poster=filename)
+                db.session.add(new_movie)
+                db.session.commit()
+
+                return jsonify(message="Movie Successfully added", title=title, poster=filename, description=description)
+
+            except Exception as e:
+                db.session.rollback()
+                return jsonify(errors=["Failed to add movie"], details=str(e))
+        else:
+            return jsonify(errors=form_errors(movieForm))
 
 @app.route('/api/v1/csrf-token', methods=['GET'])
 def get_csrf():
