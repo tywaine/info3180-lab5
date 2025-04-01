@@ -12,10 +12,13 @@ import AppFooter from "@/components/AppFooter.vue";
   </main>
   
   <AppFooter />
+
 </template>
 
 <style>
+
 body {
   padding-top: 75px;
 }
+
 </style>

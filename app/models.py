@@ -7,9 +7,9 @@ class Movie(db.Model):
     __tablename__ = 'movies'
 
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(50), unique=True)
+    title = db.Column(db.String(50))
     description = db.Column(db.Text)
-    poster = db.Column(db.String(100))
+    poster = db.Column(db.String(250), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     def __init__(self, title, description, poster, created_at=None):

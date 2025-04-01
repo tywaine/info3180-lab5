@@ -4,13 +4,13 @@ Jinja2 Documentation:    https://jinja.palletsprojects.com/
 Werkzeug Documentation:  https://werkzeug.palletsprojects.com/
 This file creates your application.
 """
-
 from app import app, db
 from flask import render_template, request, jsonify, send_file
 import os
 from app.models import Movie
 from app.forms import MovieForm
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import generate_csrf
 
 
 ###
@@ -32,14 +32,16 @@ def movies():
             poster = movieForm.poster.data
 
             filename = secure_filename(poster.filename)
+            movie = db.session.execute(db.select(Movie).filter_by(poster=filename)).scalar_one_or_none()
 
-            # Save file
+            if movie:
+                return jsonify(errors=["Movie poster already exists"])
+
             poster.save(
                 os.path.join(app.config['UPLOAD_FOLDER'],
                 filename
             ))
 
-            # Add movie to database
             new_movie = Movie(title=title, description=description, poster=filename)
             db.session.add(new_movie)
             db.session.commit()
@@ -48,9 +50,13 @@ def movies():
 
         except Exception as e:
             db.session.rollback()
-            return jsonify(error="Failed to add movie", details=str(e)), 500
+            return jsonify(errors=["Failed to add movie"], details=str(e))
     else:
         return jsonify(errors=form_errors(movieForm))
+
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf():
+    return jsonify({'csrf_token': generate_csrf()})
 
 
 ###
